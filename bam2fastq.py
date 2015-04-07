@@ -1,6 +1,10 @@
 import cProfile
 import time
 import fileinput
+import shlex
+import argparse
+import subprocess
+
 def bitfield(n):
     # returns bit array as little endian.  I add 4096 so that it will always 
     # have all of the bit in sam flag field.
@@ -42,14 +46,35 @@ class samLine(object):
     def __eq__(self, other):
         return self.name == other.name
 
+class outFiles(object):
+    def __init__(self):
+        self.files = {}
+    def writeFastq(self, read1, read2):
+        _outFiles = self.files.get(read1.rg)
+        if _outFiles is None:
+            _outFiles = (open(read1.rg +".1.fq", 'w'),
+                        open(read2.rg +".2.fq", 'w'))
+            self.files[read1.rg] = _outFiles
+        _outFiles[0].write(read1.fastq)
+        _outFiles[1].write(read2.fastq)
+
 def main():
-    files = {}
+    parser = argparse.ArgumentParser(description="convert bam to multiple FASTQ")
+    parser.add_argument('bam')
+    args = parser.parse_args()
+
+    commandLine = shlex.split("samtools view")
+    commandLine.append(args.bam)
+    samtools = subprocess.Popen(commandLine,
+            stdout=subprocess.PIPE)
+    files = outFiles()
     reads = {}
     beginTime = time.clock()
     linesRead = 0
     linesWritten = 0
     unmappedReads = []
-    for read in fileinput.input():
+    
+    for read in samtools.stdout:
         linesRead +=1
         line = samLine(read)
 #        if line.unmapped or line.nextUnmapped:
@@ -59,29 +84,17 @@ def main():
             reads[line.name] = line
         else:
             linesWritten += 1
-            outFiles = files.get(line.rg)
-            if outFiles is None:
-                outFiles = (open(line.rg +".1.fq", 'w'),
-                            open(line.rg +".2.fq", 'w'))
-                files[line.rg] = outFiles
-            outFiles[0].write(pair.fastq)
-            outFiles[1].write(line.fastq)
+            files.writeFastq(pair, line)
         if linesRead % 100000 == 0:
-            print linesRead, linesWritten, time.clock()-beginTime, len(reads), len(unmappedReads)
-#        if linesRead % 2000000 == 0:
-#            break
+            print linesRead, linesWritten, time.clock()-beginTime, len(reads)
+        if linesRead % 2000000 == 0:
+            break
     unmappedReads.sort()
     lastLine = line
     for line in unmappedReads:
         if lastLine == line:
             linesWritten += 1
-            outFiles = files.get(line.rg)
-            if outFiles is None:
-                outFiles = (open(line.rg +".1.fq", 'w'),
-                            open(line.rg +".2.fq", 'w'))
-                files[line.rg] = outFiles
-            outFiles[0].write(lastLine.fastq)
-            outFiles[1].write(line.fastq)
+            files.writeFastq(lastLine, line)
     for (file1, file2) in files.values():
         file1.close()
         file2.close()

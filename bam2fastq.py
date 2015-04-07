@@ -53,59 +53,77 @@ class outFiles(object):
         _outFiles = self.files.get(read1.rg)
         if _outFiles is None:
             _outFiles = (open(read1.rg +".1.fq", 'w'),
-                        open(read2.rg +".2.fq", 'w'))
+                    open(read2.rg +".2.fq", 'w'))
             self.files[read1.rg] = _outFiles
         _outFiles[0].write(read1.fastq)
         _outFiles[1].write(read2.fastq)
+    def close(self):
+        for (file1, file2) in self.files.values():
+            file1.close()
+            file2.close()
+
+class bam(object):
+    def __init__(self, inBam):
+        self.bam = inBam
+        self.contigs = self._getContigs()
+    def _getContigs(self):
+        contigs = []
+        commandLine = shlex.split("samtools view -H")
+        commandLine.append(self.bam)
+        samtools = subprocess.Popen(commandLine,
+                stdout=subprocess.PIPE)
+        for line in samtools.stdout:
+            headerFields = line.split("\t")
+            if headerFields[0] == "@SQ":
+                contigs.append(headerFields[1].split(":")[1])
+        return contigs
+    def getReadPairs(self, contig=None):
+        commandLine = shlex.split("samtools view")
+        commandLine.append(self.bam)
+        if contig is not None:
+            commandLine.append(contig)
+        samtools = subprocess.Popen(commandLine,
+                stdout=subprocess.PIPE)
+        reads = {}
+        beginTime = time.clock()
+        linesRead = 0
+        linesWritten = 0
+        unmappedReads = []
+        for read in samtools.stdout:
+            linesRead +=1
+            line = samLine(read)
+            pair = reads.pop(line.name, None)
+            if pair is None:
+                reads[line.name] = line
+            else:
+                linesWritten += 1
+                self.files.writeFastq(pair, line)
+            if linesRead % 100000 == 0:
+                print linesRead, linesWritten, time.clock()-beginTime, len(reads)
+            if linesRead % 2000000 == 0:
+                break
+        unmappedReads.sort()
+        lastLine = line
+        for line in unmappedReads:
+            if lastLine == line:
+                linesWritten += 1
+                self.files.writeFastq(lastLine, line)
+        self.files.close()
+
 
 def main():
     parser = argparse.ArgumentParser(description="convert bam to multiple FASTQ")
     parser.add_argument('bam')
     args = parser.parse_args()
 
-    commandLine = shlex.split("samtools view")
-    commandLine.append(args.bam)
-    samtools = subprocess.Popen(commandLine,
-            stdout=subprocess.PIPE)
-    files = outFiles()
-    reads = {}
-    beginTime = time.clock()
-    linesRead = 0
-    linesWritten = 0
-    unmappedReads = []
     
-    for read in samtools.stdout:
-        linesRead +=1
-        line = samLine(read)
-#        if line.unmapped or line.nextUnmapped:
-#            unmappedReads.append(line)
-        pair = reads.pop(line.name, None)
-        if pair is None:
-            reads[line.name] = line
-        else:
-            linesWritten += 1
-            files.writeFastq(pair, line)
-        if linesRead % 100000 == 0:
-            print linesRead, linesWritten, time.clock()-beginTime, len(reads)
-        if linesRead % 2000000 == 0:
-            break
-    unmappedReads.sort()
-    lastLine = line
-    for line in unmappedReads:
-        if lastLine == line:
-            linesWritten += 1
-            files.writeFastq(lastLine, line)
-    for (file1, file2) in files.values():
-        file1.close()
-        file2.close()
 
 
-#        print read[0:5] + '.' + read[16]
-#        print read.split("\t", 1)[0]
-#
-#        print readread[0:5] + '.' + read[16]
-#
+    inBam = bam(args.bam)
+    inBam.files = outFiles()
 
+    inBam.getReadPairs()
+    
 
 if __name__ == '__main__':
     main()

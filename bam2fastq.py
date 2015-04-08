@@ -88,10 +88,16 @@ class bam(object):
         beginTime = time.clock()
         linesRead = 0
         linesWritten = 0
+        secondaryAlignments = 0
         unmappedReads = []
         for read in samtools.stdout:
             linesRead +=1
             line = samLine(read)
+            if line.secondary:
+                # don't want to include secondary alignments when recreating the
+                # bam
+                secondaryAlignments += 1
+                continue
             pair = reads.pop(line.name, None)
             if pair is None:
                 reads[line.name] = line
@@ -99,9 +105,8 @@ class bam(object):
                 linesWritten += 1
                 self.files.writeFastq(pair, line)
             if linesRead % 100000 == 0:
-                print linesRead, linesWritten, time.clock()-beginTime, len(reads)
-            if linesRead % 2000000 == 0:
-                break
+                print linesRead, 2*linesWritten, time.clock()-beginTime,
+                print len(reads), secondaryAlignments
         unmappedReads.sort()
         lastLine = line
         for line in unmappedReads:

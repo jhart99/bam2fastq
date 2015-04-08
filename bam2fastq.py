@@ -37,10 +37,10 @@ class samLine(object):
         seq = fields[9]
         qual = fields[10]
         if self.reverse:
-            return "@%s\n%s\n+\n%s" % (self.name, reverseComplement(seq),
+            return "@%s\n%s\n+\n%s\n" % (self.name, reverseComplement(seq),
                     qual[::-1])
         else:
-            return "@%s\n%s\n+\n%s" % (self.name, seq, qual)
+            return "@%s\n%s\n+\n%s\n" % (self.name, seq, qual)
     def __lt__(self, other):
         return self.name < other.name
     def __eq__(self, other):
@@ -65,18 +65,35 @@ class outFiles(object):
 class bam(object):
     def __init__(self, inBam):
         self.bam = inBam
+        self.header = None
         self.contigs = self._getContigs()
-    def _getContigs(self):
-        contigs = []
+        self.readGroups = self._getReadGroups()
+    def _getHeader(self):
+        # a list of lists. First is by row and second is by column
+        self.header = []
         commandLine = shlex.split("samtools view -H")
         commandLine.append(self.bam)
         samtools = subprocess.Popen(commandLine,
                 stdout=subprocess.PIPE)
         for line in samtools.stdout:
             headerFields = line.split("\t")
+            self.header.append(headerFields)
+    def _getContigs(self):
+        contigs = []
+        if self.header is None:
+            self._getHeader()
+        for headerFields in self.header:
             if headerFields[0] == "@SQ":
                 contigs.append(headerFields[1].split(":")[1])
         return contigs
+    def _getReadGroups(self):
+        readGroups = []
+        if self.header is None:
+            self._getHeader()
+        for headerFields in self.header:
+            if headerFields[0] == "@RG":
+                readGroups.append(' '.join(headerFields[1:]))
+        return readGroups
     def getReadPairs(self, contig=None):
         commandLine = shlex.split("samtools view")
         commandLine.append(self.bam)
@@ -121,11 +138,13 @@ def main():
     parser.add_argument('bam')
     args = parser.parse_args()
 
-    
-
-
     inBam = bam(args.bam)
     inBam.files = outFiles()
+
+    f = open(args.bam + ".rg.txt", 'w')
+    for rg in inBam.readGroups:
+        f.write(rg)
+    f.close()
 
     inBam.getReadPairs()
     

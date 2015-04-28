@@ -4,6 +4,9 @@ import fileinput
 import shlex
 import argparse
 import subprocess
+import gzip
+import os
+import sys
 
 def bitfield(n):
     # returns bit array as little endian.  I add 4096 so that it will always 
@@ -61,6 +64,17 @@ class outFiles(object):
         for (file1, file2) in self.files.values():
             file1.close()
             file2.close()
+
+class outFilesGzip(outFiles):
+    def  writeFastq(self, read1, read2):
+        _outFiles = self.files.get(read1.rg)
+        if _outFiles is None:
+            _outFiles = (gzip.open(read1.rg +".1.fq.gz", 'w'),
+                    gzip.open(read2.rg +".2.fq.gz", 'w'))
+            self.files[read1.rg] = _outFiles
+        _outFiles[0].write(read1.fastq)
+        _outFiles[1].write(read2.fastq)
+
 
 class bam(object):
     def __init__(self, inBam):
@@ -134,21 +148,32 @@ class bam(object):
 
 
 def main():
+    print "second"
+    print "\n".join(sys.argv)
     parser = argparse.ArgumentParser(description="convert bam to multiple FASTQ")
     parser.add_argument('bam')
+    parser.add_argument('--gzip', dest='fileType', action='store_const',
+            const=outFilesGzip, default=outFiles,
+            help='Output gzipped fastq')
+    print "where is this failing?"
     args = parser.parse_args()
-
+    print os.getcwd()
     inBam = bam(args.bam)
-    inBam.files = outFiles()
-
-    f = open(args.bam + ".rg.txt", 'w')
+    inBam.files = args.fileType()
+    print os.getcwd()
+    readgroupFile = "".join(os.path.basename(args.bam) + ".rg.txt")
+    readgroupFile = os.path.join(os.getcwd(), readgroupFile)
+    f = open(readgroupFile, 'w')
+    print f.name
+    print os.getcwd()
     for rg in inBam.readGroups:
         f.write(rg)
     f.close()
 
+
     inBam.getReadPairs()
-    
 
 if __name__ == '__main__':
+    print "first"
     main()
     #cProfile.run('main()')

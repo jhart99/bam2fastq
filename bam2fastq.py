@@ -155,17 +155,12 @@ def main():
     parser.add_argument('--gzip', dest='fileType', action='store_const',
             const=outFilesGzip, default=outFiles,
             help='Output gzipped fastq')
-    print "where is this failing?"
     args = parser.parse_args()
-    print os.getcwd()
     inBam = bam(args.bam)
     inBam.files = args.fileType()
-    print os.getcwd()
     readgroupFile = "".join(os.path.basename(args.bam) + ".rg.txt")
     readgroupFile = os.path.join(os.getcwd(), readgroupFile)
     f = open(readgroupFile, 'w')
-    print f.name
-    print os.getcwd()
     for rg in inBam.readGroups:
         f.write(rg)
     f.close()
@@ -174,6 +169,5 @@ def main():
     inBam.getReadPairs()
 
 if __name__ == '__main__':
-    print "first"
     main()
     #cProfile.run('main()')

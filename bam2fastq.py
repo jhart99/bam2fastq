@@ -52,11 +52,12 @@ class samLine(object):
 class outFiles(object):
     def __init__(self):
         self.files = {}
+        self.path = "."
     def writeFastq(self, read1, read2):
         _outFiles = self.files.get(read1.rg)
         if _outFiles is None:
-            _outFiles = (open(read1.rg +".1.fq", 'w'),
-                    open(read2.rg +".2.fq", 'w'))
+            _outFiles = (open(self.path + "/" + read1.rg + ".1.fq", 'w'),
+                    open(self.path + "/" + read2.rg + ".2.fq", 'w'))
             self.files[read1.rg] = _outFiles
         _outFiles[0].write(read1.fastq)
         _outFiles[1].write(read2.fastq)
@@ -69,8 +70,8 @@ class outFilesGzip(outFiles):
     def  writeFastq(self, read1, read2):
         _outFiles = self.files.get(read1.rg)
         if _outFiles is None:
-            _outFiles = (gzip.open(read1.rg +".1.fq.gz", 'w'),
-                    gzip.open(read2.rg +".2.fq.gz", 'w'))
+            _outFiles = (gzip.open(self.path + "/" + read1.rg +".1.fq.gz", 'w'),
+                    gzip.open(self.path + "/" + read2.rg +".2.fq.gz", 'w'))
             self.files[read1.rg] = _outFiles
         _outFiles[0].write(read1.fastq)
         _outFiles[1].write(read2.fastq)
@@ -148,16 +149,16 @@ class bam(object):
 
 
 def main():
-    print "second"
-    print "\n".join(sys.argv)
     parser = argparse.ArgumentParser(description="convert bam to multiple FASTQ")
     parser.add_argument('bam')
+    parser.add_argument('outDir')
     parser.add_argument('--gzip', dest='fileType', action='store_const',
             const=outFilesGzip, default=outFiles,
             help='Output gzipped fastq')
     args = parser.parse_args()
     inBam = bam(args.bam)
     inBam.files = args.fileType()
+    inBam.files.path = args.outDir
     readgroupFile = "".join(os.path.basename(args.bam) + ".rg.txt")
     readgroupFile = os.path.join(os.getcwd(), readgroupFile)
     f = open(readgroupFile, 'w')

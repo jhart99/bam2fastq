@@ -151,7 +151,7 @@ class bam(object):
 def main():
     parser = argparse.ArgumentParser(description="convert bam to multiple FASTQ")
     parser.add_argument('bam')
-    parser.add_argument('outDir')
+    parser.add_argument('outDir', default=".")
     parser.add_argument('--gzip', dest='fileType', action='store_const',
             const=outFilesGzip, default=outFiles,
             help='Output gzipped fastq')
@@ -160,7 +160,7 @@ def main():
     inBam.files = args.fileType()
     inBam.files.path = args.outDir
     readgroupFile = "".join(os.path.basename(args.bam) + ".rg.txt")
-    readgroupFile = os.path.join(os.getcwd(), readgroupFile)
+    readgroupFile = os.path.join(args.outDir, readgroupFile)
     f = open(readgroupFile, 'w')
     for rg in inBam.readGroups:
         f.write(rg)

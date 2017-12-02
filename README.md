@@ -24,3 +24,5 @@ with 1 core. Samtools and this program run concurrently, but in practice the
 python uses a full core while samtools uses 30-50% of a core. In my hands, on
 my desktop which uses an Intel i5-3470 processor I see about 1 million reads
 processed per 10 sec.
+
+[![Analytics](https://ga-beacon.appspot.com/UA-110461825-1/bam2fastq?pixel)](https://github.com/jhart99/bam2fastq)

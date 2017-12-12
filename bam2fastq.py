@@ -115,9 +115,9 @@ class OutFilesGzip(OutFiles):
         if target_files is None:
             target_files = (
                 gzip.open(
-                    self.path + "/" + read1.read_group + ".1.fq.gz", 'w'),
+                    self.path + "/" + read1.read_group + ".1.fq.gz", 'w', 1),
                 gzip.open(
-                    self.path + "/" + read2.read_group + ".2.fq.gz", 'w'))
+                    self.path + "/" + read2.read_group + ".2.fq.gz", 'w', 1))
             self.files[read1.read_group] = target_files
         target_files[0].write(read1.fastq)
         target_files[1].write(read2.fastq)

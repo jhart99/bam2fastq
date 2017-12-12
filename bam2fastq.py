@@ -3,6 +3,7 @@
 bam2fastq
 """
 
+import cProfile
 import time
 import shlex
 import argparse
@@ -245,6 +246,8 @@ def main():
     in_bam = Bam(args.bam)
     in_bam.files = args.fileType()
     in_bam.files.path = args.outDir
+    if not os.path.exists(args.outDir):
+        os.makedirs(args.outDir)
     read_group_file = "".join(os.path.basename(args.bam) + ".rg.txt")
     read_group_file = os.path.join(args.outDir, read_group_file)
     read_group_file_handle = open(read_group_file, 'w')
@@ -256,4 +259,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    cProfile.run('main()')

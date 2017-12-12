@@ -34,12 +34,12 @@ class SamLine(object):
     """
     def __init__(self, read, read_group=None):
         self.read = read
-        fields = read.split("\t")
+        fields = read.split()
         self.name = fields[0]
         if read_group is None:
             for attrib in fields[11:]:
                 if attrib[0:2] == "RG":
-                    self.read_group = attrib[6:]
+                    self.read_group = attrib.split(':')[-1]
                     break
             # self.read_group = read[0:5] + '.' + read[16]
         else:

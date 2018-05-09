@@ -49,11 +49,33 @@ class SamLine(object):
         self.next_unmapped = self.flag[-4] == "1"
         self.reverse = self.flag[-5] == "1"
         self.secondary = self.flag[-9] == "1"
-        # self.seq = fields[9]
-        # self.qual = fields[10]
+        self.seq = fields[9]
+        self.qual = fields[10]
 
     def __str__(self):
         return self.read
+
+    @property
+    def sam(self):
+        """
+        returns the sam line in a FASTQ format
+        """
+
+        flag = 128 * self.flag[-8] + 64 * self.flag[-7] + 13
+        if self.reverse:
+            seq = reverse_complement(self.seq)
+            qual = self.qual[::-1]
+        else:
+            seq = self.seq
+            qual = self.qual
+        attrib = "RG:Z:{rg}".format(rg=self.read_group)
+        return "{QNAME}\t{FLAG}\t*\t0\t0\t*\t*\t0\t0\t{SEQ}\t{MAPQ}\t{ATTRIB}".format(QNAME=self.name,
+                                                                                    FLAG=flag,
+                                                                                    SEQ=seq,
+                                                                                    QUAL=qual,
+                                                                                    ATTRIB=attrib)
+
+
 
     @property
     def fastq(self):

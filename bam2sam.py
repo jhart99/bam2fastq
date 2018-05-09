@@ -57,7 +57,7 @@ class SamLine(object):
         returns the sam line in a FASTQ format
         """
 
-        flag = 128 * self.flag[-8] + 64 * self.flag[-7] + 13
+        flag = 128 * (self.flag[-8] == "1") + 64 * (self.flag[-7] == "1") + 13
         if self.reverse:
             seq = reverse_complement(self.seq)
             qual = self.qual[::-1]

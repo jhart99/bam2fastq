@@ -65,7 +65,7 @@ class SamLine(object):
             seq = self.seq
             qual = self.qual
         attrib = "RG:Z:{rg}".format(rg=self.read_group)
-        out = [self.name, flag, "*", "0",
+        out = [self.name, str(flag), "*", "0",
                "0", "*", "*", "0", "0",
                seq, qual, attrib]
         return "\t".join(out)

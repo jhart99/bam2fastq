@@ -190,7 +190,7 @@ class Bam(object):
         """
         process the bam to find the paired reads and output them to a FASTQ
         """
-        command_line = shlex.split("samtools view")
+        command_line = shlex.split("samtools view -F 256")
         command_line.append(self.bam)
         if contig is not None:
             command_line.append(contig)
@@ -259,4 +259,4 @@ def main():
 
 
 if __name__ == '__main__':
-    cProfile.run('main()')
+    main()

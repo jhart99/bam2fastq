@@ -39,7 +39,6 @@ class SamLine(object):
                 if attrib[0:2] == "RG":
                     self.read_group = attrib.split(':')[-1]
                     break
-            # self.read_group = read[0:5] + '.' + read[16]
         else:
             self.read_group = read_group
         self.flag = bin(int(fields[1]))
@@ -49,6 +48,7 @@ class SamLine(object):
         self.secondary = self.flag[-9] == "1"
         self.seq = fields[9]
         self.qual = fields[10]
+        self.se = False
 
     def __str__(self):
         return self.read
@@ -56,10 +56,13 @@ class SamLine(object):
     @property
     def sam(self):
         """
-        returns the sam line in a FASTQ format
+        returns the sam line in unmapped SAM format
         """
 
-        flag = 128 * (self.flag[-8] == "1") + 64 * (self.flag[-7] == "1") + 13
+        if self.se:
+            flag = 12
+        else:
+            flag = 128 * (self.flag[-8] == "1") + 64 * (self.flag[-7] == "1") + 13
         if self.reverse:
             seq = reverse_complement(self.seq)
             qual = self.qual[::-1]
@@ -156,6 +159,31 @@ class Bam(object):
                 read_groups.append(' '.join(header_fields[1:]))
         return read_groups
 
+    def get_reads(self, contig=None):
+        """
+        process the bam to find the paired reads and output them to a FASTQ
+        """
+        # The magic 256 number is to filter out secondary alignments
+        command_line = shlex.split("samtools view -F 256")
+        command_line.append(self.bam)
+        if contig is not None:
+            command_line.append(contig)
+        samtools = subprocess.Popen(command_line,
+                                    stdout=subprocess.PIPE)
+        for read in samtools.stdout:
+            line = SamLine(read)
+            line.se = True
+            for i in range(1000):
+                try:
+                    print line.sam
+                except IOError as e:
+                    if e.errno == errno.EPIPE:
+                        time.sleep(i)
+                        continue
+                    else:
+                        raise
+                break
+
     def get_read_pairs(self, contig=None):
         """
         process the bam to find the paired reads and output them to a FASTQ
@@ -175,6 +203,9 @@ class Bam(object):
             if pair is None:
                 reads[line.name] = line
             else:
+                # This for try block is to make an exponential delay
+                # for emitting the sam lines when the output pipe
+                # isn't set up yet.
                 for i in range(1000):
                     try:
                         print pair.sam
@@ -199,12 +230,15 @@ def main():
     Main including the argument parser
     """
     parser = argparse.ArgumentParser(
-        description="convert bam to unordered SAM for mapping")
+        description="convert mapped bam to unmapped SAM for remapping")
     parser.add_argument('bam')
+    parser.add_argument('--se', help="single ended input", action="store_true")
     args = parser.parse_args()
     in_bam = Bam(args.bam)
-
-    in_bam.get_read_pairs()
+    if args.se:
+        in_bam.get_reads()
+    else:
+        in_bam.get_read_pairs()
 
 
 if __name__ == '__main__':

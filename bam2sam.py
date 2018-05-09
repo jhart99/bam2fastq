@@ -6,6 +6,8 @@ bam2fastq
 import shlex
 import argparse
 import subprocess
+import time
+import errno
 
 
 def bitfield(num):
@@ -173,8 +175,17 @@ class Bam(object):
             if pair is None:
                 reads[line.name] = line
             else:
-                print pair.sam
-                print line.sam
+                for i in range(1000):
+                    try:
+                        print pair.sam
+                        print line.sam
+                    except IOError as e:
+                        if e.errno == errno.EPIPE:
+                            time.sleep(i)
+                            continue
+                        else:
+                            raise
+                break
         unmapped_reads.sort()
         last_line = line
         for line in unmapped_reads:

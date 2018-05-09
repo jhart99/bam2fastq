@@ -185,7 +185,7 @@ class Bam(object):
                             continue
                         else:
                             raise
-                break
+                    break
         unmapped_reads.sort()
         last_line = line
         for line in unmapped_reads:

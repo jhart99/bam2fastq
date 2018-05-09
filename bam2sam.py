@@ -3,13 +3,9 @@
 bam2fastq
 """
 
-import cProfile
-import time
 import shlex
 import argparse
 import subprocess
-import gzip
-import os
 
 
 def bitfield(num):
@@ -69,13 +65,10 @@ class SamLine(object):
             seq = self.seq
             qual = self.qual
         attrib = "RG:Z:{rg}".format(rg=self.read_group)
-        return "{QNAME}\t{FLAG}\t*\t0\t0\t*\t*\t0\t0\t{SEQ}\t{MAPQ}\t{ATTRIB}".format(QNAME=self.name,
-                                                                                    FLAG=flag,
-                                                                                    SEQ=seq,
-                                                                                    QUAL=qual,
-                                                                                    ATTRIB=attrib)
-
-
+        out = [self.name, flag, "*", "0",
+               "0", "*", "*", "0", "0",
+               seq, qual, attrib]
+        return "\t".join(out)
 
     @property
     def fastq(self):
@@ -180,14 +173,14 @@ class Bam(object):
             if pair is None:
                 reads[line.name] = line
             else:
-                print pair
-                print line
+                print pair.sam
+                print line.sam
         unmapped_reads.sort()
         last_line = line
         for line in unmapped_reads:
             if last_line == line:
-                print last_line
-                print line
+                print last_line.sam
+                print line.sam
 
 
 def main():
